@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nest Agent · Control Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #0a0a0f;
+  --surface: #12121a;
+  --surface-2: #1a1a26;
+  --surface-3: #222233;
+  --border: #2a2a3e;
+  --border-active: #4a4a6e;
+  --text: #e4e4ef;
+  --text-dim: #8888a4;
+  --text-muted: #555570;
+  --accent: #6c63ff;
+  --accent-glow: rgba(108, 99, 255, 0.15);
+  --green: #34d399;
+  --green-dim: rgba(52, 211, 153, 0.12);
+  --red: #f87171;
+  --red-dim: rgba(248, 113, 113, 0.12);
+  --orange: #fb923c;
+  --orange-dim: rgba(251, 146, 60, 0.12);
+  --cyan: #22d3ee;
+  --cyan-dim: rgba(34, 211, 238, 0.12);
+  --yellow: #facc15;
+  --yellow-dim: rgba(250, 204, 21, 0.12);
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'DM Sans', system-ui, sans-serif;
+  --radius: 10px;
+}
+
+html { font-size: 14px; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ─── LAYOUT ─── */
+.app {
+  display: grid;
+  grid-template-columns: 260px 1fr 340px;
+  grid-template-rows: 56px 1fr;
+  height: 100vh;
+}
+
+/* ─── HEADER ─── */
+.header {
+  grid-column: 1 / -1;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 16px;
+  z-index: 10;
+}
+.header .logo {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.5px;
+  color: var(--accent);
+}
+.header .logo span { color: var(--text-dim); font-weight: 400; }
+.header .status {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.header .status .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: background 0.3s;
+}
+.header .status .dot.online { background: var(--green); box-shadow: 0 0 8px rgba(52,211,153,0.5); }
+.header .auth-info {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── SIDEBAR ─── */
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.sidebar-section { padding: 16px 14px 8px; }
+.sidebar-section h3 {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-dim);
+  transition: all 0.15s;
+  margin-bottom: 2px;
+}
+.nav-item:hover { background: var(--surface-2); color: var(--text); }
+.nav-item.active { background: var(--accent-glow); color: var(--accent); }
+.nav-item .icon {
+  width: 18px; height: 18px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+.nav-item .badge {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--surface-3);
+  color: var(--text-muted);
+}
+
+/* ─── AUTH PANEL (overlay) ─── */
+.auth-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.auth-overlay.hidden { display: none; }
+.auth-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 36px;
+  width: 400px;
+  max-width: 90vw;
+}
+.auth-card h2 {
+  font-family: var(--mono);
+  font-size: 18px;
+  margin-bottom: 6px;
+}
+.auth-card p { font-size: 13px; color: var(--text-dim); margin-bottom: 24px; }
+.auth-tabs {
+  display: flex; gap: 0;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.auth-tab {
+  flex: 1;
+  padding: 8px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--surface-2);
+  color: var(--text-dim);
+  transition: all 0.15s;
+  border: none;
+}
+.auth-tab.active { background: var(--accent); color: #fff; }
+
+.form-group { margin-bottom: 14px; }
+.form-group label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+input, textarea, select {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+textarea { resize: vertical; min-height: 60px; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { filter: brightness(1.15); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+.btn-ghost:hover { border-color: var(--text-dim); color: var(--text); }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-danger { background: var(--red-dim); color: var(--red); border: 1px solid transparent; }
+.btn-danger:hover { border-color: var(--red); }
+.btn-block { width: 100%; }
+
+/* ─── MAIN CONTENT ─── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* ─── CHAT PANEL ─── */
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.msg {
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  line-height: 1.65;
+  word-break: break-word;
+  animation: msgIn 0.2s ease;
+}
+@keyframes msgIn { from { opacity: 0; transform: translateY(6px); } }
+.msg.user {
+  align-self: flex-end;
+  background: var(--accent);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.msg.assistant {
+  align-self: flex-start;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+}
+.msg.assistant .agent-badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--accent-glow);
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+.msg.system-event {
+  align-self: center;
+  max-width: 100%;
+  background: transparent;
+  padding: 4px 0;
+}
+.event-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+.event-chip.routing { background: var(--cyan-dim); color: var(--cyan); }
+.event-chip.tool-start { background: var(--orange-dim); color: var(--orange); }
+.event-chip.tool-result { background: var(--green-dim); color: var(--green); }
+.event-chip.tool-error { background: var(--red-dim); color: var(--red); }
+.event-chip.session { background: var(--surface-2); color: var(--text-muted); }
+.event-chip.error { background: var(--red-dim); color: var(--red); }
+
+.tool-detail {
+  margin-top: 4px;
+  padding: 8px 10px;
+  background: var(--bg);
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.chat-input-area {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.chat-input-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+.chat-input-row textarea {
+  flex: 1;
+  min-height: 42px;
+  max-height: 140px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-family: var(--sans);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.chat-options {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.chat-options select, .chat-options input {
+  width: auto;
+  min-width: 140px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.chat-options label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+  display: block;
+}
+
+/* ─── RIGHT PANEL ─── */
+.right-panel {
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.panel-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+.panel-tab {
+  flex: 1;
+  padding: 12px 8px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+.panel-tab:hover { color: var(--text-dim); }
+.panel-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+}
+.panel-content.hidden { display: none; }
+
+/* ─── EVENT LOG ─── */
+.event-log-item {
+  padding: 8px 10px;
+  margin-bottom: 4px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.5;
+  border-left: 3px solid var(--border);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.event-log-item:hover { background: var(--surface-3); }
+.event-log-item .ev-type { font-weight: 600; }
+.event-log-item .ev-time { color: var(--text-muted); float: right; }
+.event-log-item.ev-session { border-left-color: var(--text-muted); }
+.event-log-item.ev-routing { border-left-color: var(--cyan); }
+.event-log-item.ev-tool { border-left-color: var(--orange); }
+.event-log-item.ev-agent { border-left-color: var(--accent); }
+.event-log-item.ev-error { border-left-color: var(--red); }
+.event-log-item .ev-detail {
+  display: none;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  white-space: pre-wrap;
+  color: var(--text-dim);
+  max-height: 200px;
+  overflow-y: auto;
+}
+.event-log-item.expanded .ev-detail { display: block; }
+
+/* ─── CONVERSATIONS ─── */
+.conv-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition: background 0.1s;
+  border: 1px solid transparent;
+}
+.conv-item:hover { background: var(--surface-2); }
+.conv-item.active { background: var(--accent-glow); border-color: var(--accent); }
+.conv-item .conv-title {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.conv-item .conv-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ─── TOOL TESTER ─── */
+.tool-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.tool-card h4 {
+  font-family: var(--mono);
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+.tool-card p {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+}
+
+/* ─── QUICK PROMPTS ─── */
+.quick-prompts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 12px;
+  padding: 40px;
+}
+.quick-prompts h2 {
+  font-family: var(--mono);
+  font-size: 20px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+.quick-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+  max-width: 500px;
+}
+.quick-card {
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.quick-card:hover { border-color: var(--accent); background: var(--accent-glow); }
+.quick-card .qc-icon { font-size: 20px; margin-bottom: 8px; }
+.quick-card .qc-title { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+.quick-card .qc-desc { font-size: 11px; color: var(--text-muted); }
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-active); }
+
+/* ─── TOAST ─── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 10px 18px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text);
+  z-index: 200;
+  animation: toastIn 0.2s ease;
+  pointer-events: none;
+}
+.toast.error { border-color: var(--red); color: var(--red); }
+.toast.success { border-color: var(--green); color: var(--green); }
+@keyframes toastIn { from { opacity: 0; transform: translateY(10px); } }
+
+.loading-dots::after {
+  content: '';
+  animation: dots 1.2s steps(4) infinite;
+}
+@keyframes dots {
+  0% { content: ''; }
+  25% { content: '.'; }
+  50% { content: '..'; }
+  75% { content: '...'; }
+}
+</style>
+</head>
+<body>
+
+<!-- AUTH OVERLAY -->
+<div id="authOverlay" class="auth-overlay">
+  <div class="auth-card">
+    <h2>Nest Agent</h2>
+    <p>Multi-Agent Orchestration System</p>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">登录</button>
+      <button class="auth-tab" onclick="switchAuthTab('register')">注册</button>
+    </div>
+    <form id="authForm" onsubmit="handleAuth(event)">
+      <div id="registerFields" style="display:none">
+        <div class="form-group">
+          <label>名称</label>
+          <input type="text" id="authName" placeholder="Your Name" />
+        </div>
+        <div class="form-group">
+          <label>租户 ID</label>
+          <input type="text" id="authTenant" value="tenant-001" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>邮箱</label>
+        <input type="email" id="authEmail" placeholder="user@example.com" required />
+      </div>
+      <div class="form-group">
+        <label>密码</label>
+        <input type="password" id="authPassword" placeholder="••••••" required minlength="6" />
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" id="authBtn">登录</button>
+    </form>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app">
+  <!-- HEADER -->
+  <header class="header">
+    <div class="logo">nest-agent <span>/ control panel</span></div>
+    <div class="auth-info" id="authInfo"></div>
+    <div class="status">
+      <div class="dot" id="statusDot"></div>
+      <span id="statusText">未连接</span>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="logout()">退出</button>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <h3>对话</h3>
+      <button class="btn btn-ghost btn-sm btn-block" onclick="newConversation()" style="margin-bottom:10px">+ 新对话</button>
+      <div id="convList"></div>
+    </div>
+    <div class="sidebar-section">
+      <h3>快速工具测试</h3>
+      <div class="nav-item" onclick="sendQuick('帮我搜索一下 LangGraph 最新版本有什么新功能')">
+        <span class="icon">🔍</span> Web Search
+      </div>
+      <div class="nav-item" onclick="sendQuick('帮我在知识库中搜索关于用户认证的相关资料')">
+        <span class="icon">📚</span> RAG 检索
+      </div>
+      <div class="nav-item" onclick="sendQuick('你好，介绍一下你自己和你的能力')">
+        <span class="icon">💬</span> Responder
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main" id="mainPanel">
+    <!-- Welcome -->
+    <div class="quick-prompts" id="welcomePanel">
+      <h2>⬡ Nest Agent</h2>
+      <p style="color:var(--text-dim);margin-bottom:16px;text-align:center;max-width:400px">
+        多智能体编排系统 · Supervisor + DAG 混合模式<br>
+        点击下方卡片或左侧工具快速开始测试
+      </p>
+      <div class="quick-grid">
+        <div class="quick-card" onclick="sendQuick('帮我搜索一下 2025 年前端最流行的框架有哪些')">
+          <div class="qc-icon">🔍</div>
+          <div class="qc-title">网页搜索</div>
+          <div class="qc-desc">测试 Web Search 工具</div>
+        </div>
+        <div class="quick-card" onclick="sendQuick('帮我在知识库中搜索关于 Agent 编排的相关资料')">
+          <div class="qc-icon">📚</div>
+          <div class="qc-title">知识库检索</div>
+          <div class="qc-desc">测试 RAG Retrieval 工具</div>
+        </div>
+        <div class="quick-card" onclick="sendQuick('你好！请介绍一下你拥有的能力和可以使用的工具')">
+          <div class="qc-icon">🤖</div>
+          <div class="qc-title">Agent 介绍</div>
+          <div class="qc-desc">测试 Supervisor 路由</div>
+        </div>
+        <div class="quick-card" onclick="sendQuick('什么是 RAG？它和传统搜索有什么区别？')">
+          <div class="qc-icon">💬</div>
+          <div class="qc-title">智能问答</div>
+          <div class="qc-desc">测试 Responder 直答</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat -->
+    <div class="chat-messages" id="chatMessages" style="display:none"></div>
+    <div class="chat-input-area">
+      <div class="chat-options">
+        <div>
+          <label>会话 ID</label>
+          <input type="text" id="optConvId" placeholder="自动创建" style="width:220px" />
+        </div>
+        <div>
+          <label>工作流 ID</label>
+          <input type="text" id="optWorkflowId" placeholder="可选 (DAG 模式)" style="width:180px" />
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <textarea id="chatInput" placeholder="输入消息... (Enter 发送, Shift+Enter 换行)" rows="1"></textarea>
+        <button class="btn btn-primary" id="sendBtn" onclick="sendMessage()">发送</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- RIGHT PANEL -->
+  <aside class="right-panel">
+    <div class="panel-tabs">
+      <div class="panel-tab active" data-tab="events" onclick="switchTab(this,'events')">事件流</div>
+      <div class="panel-tab" data-tab="raw" onclick="switchTab(this,'raw')">原始数据</div>
+      <div class="panel-tab" data-tab="info" onclick="switchTab(this,'info')">信息</div>
+    </div>
+    <div class="panel-content" id="panelEvents">
+      <div id="eventLog" style="font-size:12px;color:var(--text-muted);text-align:center;padding:40px 0">
+        发送消息后查看实时事件流
+      </div>
+    </div>
+    <div class="panel-content hidden" id="panelRaw">
+      <pre id="rawLog" style="font-family:var(--mono);font-size:11px;color:var(--text-dim);white-space:pre-wrap;word-break:break-all"></pre>
+    </div>
+    <div class="panel-content hidden" id="panelInfo">
+      <div class="tool-card">
+        <h4>系统信息</h4>
+        <p>API Base: <code style="color:var(--accent)">http://localhost:3000/api/v1</code></p>
+        <p>协议: AG-UI (Agent User Interaction Protocol)</p>
+        <p>编排模式: Supervisor + DAG</p>
+      </div>
+      <div class="tool-card">
+        <h4>可用 Agents</h4>
+        <p style="margin-bottom:4px"><span style="color:var(--cyan)">researcher</span> — Web Search, RAG</p>
+        <p><span style="color:var(--accent)">responder</span> — 直接回复</p>
+      </div>
+      <div class="tool-card">
+        <h4>可用 Tools</h4>
+        <p style="margin-bottom:4px">🔍 web_search</p>
+        <p>📚 rag_retrieval</p>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+const API = 'http://localhost:3000/api/v1';
+let token = localStorage.getItem('nest_agent_token') || '';
+let currentUser = JSON.parse(localStorage.getItem('nest_agent_user') || 'null');
+let currentConvId = null;
+let isStreaming = false;
+let eventCount = 0;
+let abortController = null;
+
+// ─── AUTH ───
+const authMode = { current: 'login' };
+
+function switchAuthTab(mode) {
+  authMode.current = mode;
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.auth-tab:${mode === 'login' ? 'first' : 'last'}-child`).classList.add('active');
+  document.getElementById('registerFields').style.display = mode === 'register' ? 'block' : 'none';
+  document.getElementById('authBtn').textContent = mode === 'login' ? '登录' : '注册';
+}
+
+async function handleAuth(e) {
+  e.preventDefault();
+  const email = document.getElementById('authEmail').value;
+  const password = document.getElementById('authPassword').value;
+  const btn = document.getElementById('authBtn');
+  btn.disabled = true;
+  btn.textContent = '...';
+
+  try {
+    if (authMode.current === 'register') {
+      const name = document.getElementById('authName').value || 'User';
+      const tenantId = document.getElementById('authTenant').value || 'tenant-001';
+      const res = await fetch(`${API}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, name, tenantId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || JSON.stringify(data.errors));
+      toast('注册成功，自动登录中...', 'success');
+    }
+
+    const res = await fetch(`${API}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || '登录失败');
+
+    token = data.accessToken;
+    currentUser = data.user;
+    localStorage.setItem('nest_agent_token', token);
+    localStorage.setItem('nest_agent_user', JSON.stringify(currentUser));
+    onAuthed();
+  } catch (err) {
+    toast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = authMode.current === 'login' ? '登录' : '注册';
+  }
+}
+
+function onAuthed() {
+  document.getElementById('authOverlay').classList.add('hidden');
+  document.getElementById('authInfo').textContent = currentUser?.email || '';
+  document.getElementById('statusDot').classList.add('online');
+  document.getElementById('statusText').textContent = '已连接';
+  loadConversations();
+}
+
+function logout() {
+  token = '';
+  currentUser = null;
+  localStorage.removeItem('nest_agent_token');
+  localStorage.removeItem('nest_agent_user');
+  document.getElementById('authOverlay').classList.remove('hidden');
+  document.getElementById('statusDot').classList.remove('online');
+  document.getElementById('statusText').textContent = '未连接';
+}
+
+// ─── CONVERSATIONS ───
+async function loadConversations() {
+  try {
+    const res = await fetch(`${API}/chat/conversations`, { headers: authHeaders() });
+    if (!res.ok) return;
+    const convs = await res.json();
+    const list = document.getElementById('convList');
+    list.innerHTML = '';
+    convs.forEach(c => {
+      const div = document.createElement('div');
+      div.className = `conv-item ${c.id === currentConvId ? 'active' : ''}`;
+      div.innerHTML = `
+        <div class="conv-title">${c.title || '新对话'}</div>
+        <div class="conv-meta">${new Date(c.createdAt).toLocaleString('zh-CN')}</div>
+      `;
+      div.onclick = () => loadConversation(c.id);
+      list.appendChild(div);
+    });
+  } catch {}
+}
+
+async function loadConversation(convId) {
+  currentConvId = convId;
+  document.getElementById('optConvId').value = convId;
+  try {
+    const res = await fetch(`${API}/chat/conversations/${convId}/messages`, { headers: authHeaders() });
+    if (!res.ok) return;
+    const messages = await res.json();
+    showChat();
+    const chat = document.getElementById('chatMessages');
+    chat.innerHTML = '';
+    messages.forEach(m => {
+      if (m.role === 'user') appendUserMsg(m.content);
+      else if (m.role === 'assistant') appendAssistantMsg(m.content, m.agentName);
+    });
+    loadConversations();
+  } catch {}
+}
+
+function newConversation() {
+  currentConvId = null;
+  document.getElementById('optConvId').value = '';
+  document.getElementById('chatMessages').innerHTML = '';
+  document.getElementById('welcomePanel').style.display = 'flex';
+  document.getElementById('chatMessages').style.display = 'none';
+  clearEvents();
+}
+
+// ─── CHAT ───
+function showChat() {
+  document.getElementById('welcomePanel').style.display = 'none';
+  document.getElementById('chatMessages').style.display = 'flex';
+}
+
+function sendQuick(text) {
+  document.getElementById('chatInput').value = text;
+  sendMessage();
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const message = input.value.trim();
+  if (!message || isStreaming) return;
+
+  showChat();
+  appendUserMsg(message);
+  input.value = '';
+  autoResize(input);
+
+  isStreaming = true;
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('sendBtn').textContent = '⏳';
+  clearEvents();
+
+  const body = { message };
+  const convId = document.getElementById('optConvId').value.trim();
+  const workflowId = document.getElementById('optWorkflowId').value.trim();
+  if (convId) body.conversationId = convId;
+  if (workflowId) body.workflowId = workflowId;
+
+  abortController = new AbortController();
+
+  // AG-UI 消息收集状态
+  const messageBuffers = {};  // messageId → { content, role }
+  let currentStepName = '';
+
+  try {
+    const res = await fetch(`${API}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(body),
+      signal: abortController.signal,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: res.statusText }));
+      throw new Error(err.message || `HTTP ${res.status}`);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      let eventType = '';
+      for (const line of lines) {
+        if (line.startsWith('event: ')) {
+          eventType = line.slice(7).trim();
+        } else if (line.startsWith('data: ')) {
+          const raw = line.slice(6).trim();
+          appendRaw(eventType, raw);
+
+          if (raw === '[DONE]') continue;
+
+          try {
+            const evt = JSON.parse(raw);
+            processEvent(eventType, evt, messageBuffers);
+
+            // 收集 TextMessage 三段式
+            if (eventType === 'TEXT_MESSAGE_START') {
+              messageBuffers[evt.messageId] = { content: '', role: evt.role };
+            }
+            if (eventType === 'TEXT_MESSAGE_CONTENT') {
+              if (messageBuffers[evt.messageId]) {
+                messageBuffers[evt.messageId].content += evt.delta;
+              }
+            }
+            if (eventType === 'TEXT_MESSAGE_END') {
+              const msg = messageBuffers[evt.messageId];
+              if (msg && msg.content) {
+                appendAssistantMsg(msg.content, currentStepName);
+              }
+            }
+            if (eventType === 'STEP_STARTED') {
+              currentStepName = evt.stepName || '';
+            }
+          } catch {}
+        }
+      }
+    }
+
+    loadConversations();
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      appendSystemEvent('error', `请求失败: ${err.message}`);
+      toast(err.message, 'error');
+    }
+  } finally {
+    isStreaming = false;
+    document.getElementById('sendBtn').disabled = false;
+    document.getElementById('sendBtn').textContent = '发送';
+    abortController = null;
+  }
+}
+
+function processEvent(type, evt) {
+  eventCount++;
+
+  switch (type) {
+    // 生命周期
+    case 'RUN_STARTED':
+      addEventLog('session', 'RUN STARTED', `thread: ${evt.threadId || ''} run: ${evt.runId || ''}`, evt);
+      break;
+    case 'RUN_FINISHED':
+      addEventLog('session', 'RUN FINISHED', '', evt);
+      break;
+    case 'RUN_ERROR':
+      addEventLog('error', 'RUN ERROR', evt.message || '', evt);
+      appendSystemEvent('error', `⚠️ Error: ${evt.message}`);
+      break;
+
+    // Step
+    case 'STEP_STARTED':
+      addEventLog('routing', 'STEP STARTED', evt.stepName || '', evt);
+      appendSystemEvent('routing', `🔀 Step: ${evt.stepName}`);
+      break;
+    case 'STEP_FINISHED':
+      addEventLog('routing', 'STEP FINISHED', evt.stepName || '', evt);
+      break;
+
+    // 文本消息三段式
+    case 'TEXT_MESSAGE_START':
+      addEventLog('agent', 'MSG START', `[${evt.role}] id: ${evt.messageId}`, evt);
+      break;
+    case 'TEXT_MESSAGE_CONTENT':
+      addEventLog('agent', 'MSG CONTENT', `${(evt.delta || '').slice(0, 60)}...`, evt);
+      break;
+    case 'TEXT_MESSAGE_END':
+      addEventLog('agent', 'MSG END', `id: ${evt.messageId}`, evt);
+      break;
+
+    // 工具调用
+    case 'TOOL_CALL_START':
+      addEventLog('tool', 'TOOL CALL', `${evt.toolCallName}`, evt);
+      appendToolEvent('start', { toolName: evt.toolCallName, toolCallId: evt.toolCallId });
+      break;
+    case 'TOOL_CALL_ARGS':
+      addEventLog('tool', 'TOOL ARGS', `${(evt.delta || '').slice(0, 60)}`, evt);
+      break;
+    case 'TOOL_CALL_END':
+      addEventLog('tool', 'TOOL END', `id: ${evt.toolCallId}`, evt);
+      break;
+    case 'TOOL_CALL_RESULT':
+      addEventLog('tool', 'TOOL RESULT', `${(evt.content || '').slice(0, 60)}...`, evt);
+      appendToolEvent('result', { toolName: 'tool', toolCallId: evt.toolCallId, output: evt.content, success: true });
+      break;
+
+    // 自定义
+    case 'CUSTOM':
+      addEventLog('session', `CUSTOM: ${evt.name}`, '', evt);
+      break;
+
+    default:
+      addEventLog('session', type || 'UNKNOWN', '', evt);
+  }
+}
+
+// ─── UI HELPERS ───
+function appendUserMsg(text) {
+  const chat = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg user';
+  div.textContent = text;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function appendAssistantMsg(text, agent) {
+  const chat = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg assistant';
+  div.innerHTML = (agent ? `<div class="agent-badge">${escHtml(agent)}</div>` : '') +
+    `<div>${formatContent(text)}</div>`;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function appendSystemEvent(cls, text) {
+  const chat = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg system-event';
+  div.innerHTML = `<span class="event-chip ${cls}">${escHtml(text)}</span>`;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function appendToolEvent(kind, data) {
+  const chat = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg system-event';
+
+  if (kind === 'start') {
+    let inputStr = '';
+    try { inputStr = JSON.stringify(data.input, null, 2); } catch { inputStr = String(data.input); }
+    div.innerHTML = `
+      <span class="event-chip tool-start">🔧 ${escHtml(data.toolName)} 调用中...</span>
+      <div class="tool-detail">${escHtml(inputStr)}</div>
+    `;
+  } else {
+    let outputStr = '';
+    try {
+      const parsed = JSON.parse(data.output);
+      outputStr = JSON.stringify(parsed, null, 2);
+    } catch { outputStr = String(data.output); }
+    const cls = data.success ? 'tool-result' : 'tool-error';
+    div.innerHTML = `
+      <span class="event-chip ${cls}">${data.success ? '✅' : '❌'} ${escHtml(data.toolName)} 结果</span>
+      <div class="tool-detail">${escHtml(outputStr)}</div>
+    `;
+  }
+
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function addEventLog(cls, type, desc, raw) {
+  const log = document.getElementById('eventLog');
+  if (eventCount === 1) log.innerHTML = '';
+
+  const div = document.createElement('div');
+  div.className = `event-log-item ev-${cls}`;
+  const time = new Date().toLocaleTimeString('zh-CN');
+  div.innerHTML = `
+    <span class="ev-type">${escHtml(type)}</span>
+    <span class="ev-time">${time}</span>
+    <div style="color:var(--text-dim);font-size:10px;margin-top:2px">${escHtml(desc)}</div>
+    <div class="ev-detail">${escHtml(JSON.stringify(raw, null, 2))}</div>
+  `;
+  div.onclick = () => div.classList.toggle('expanded');
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+function appendRaw(type, data) {
+  const raw = document.getElementById('rawLog');
+  raw.textContent += `event: ${type}\ndata: ${data}\n\n`;
+  raw.parentElement.scrollTop = raw.parentElement.scrollHeight;
+}
+
+function clearEvents() {
+  eventCount = 0;
+  document.getElementById('eventLog').innerHTML = '<div style="font-size:12px;color:var(--text-muted);text-align:center;padding:40px 0">发送消息后查看实时事件流</div>';
+  document.getElementById('rawLog').textContent = '';
+}
+
+function switchTab(el, tab) {
+  document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.panel-content').forEach(p => p.classList.add('hidden'));
+  document.getElementById('panel' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.remove('hidden');
+}
+
+function formatContent(text) {
+  // Basic markdown: **bold**, `code`, ```code blocks```, newlines
+  return escHtml(text)
+    .replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre style="background:var(--bg);padding:10px;border-radius:6px;margin:8px 0;overflow-x:auto;font-family:var(--mono);font-size:12px">$2</pre>')
+    .replace(/`([^`]+)`/g, '<code style="background:var(--bg);padding:2px 5px;border-radius:3px;font-family:var(--mono);font-size:12px">$1</code>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+}
+
+function escHtml(s) {
+  const div = document.createElement('div');
+  div.textContent = s || '';
+  return div.innerHTML;
+}
+
+function authHeaders() {
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
+function toast(msg, type = '') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ─── TEXTAREA AUTO RESIZE ───
+const chatInput = document.getElementById('chatInput');
+chatInput.addEventListener('input', () => autoResize(chatInput));
+chatInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+}
+
+// ─── INIT ───
+if (token && currentUser) {
+  onAuthed();
+} else {
+  document.getElementById('authOverlay').classList.remove('hidden');
+}
+</script>
+</body>
+</html>

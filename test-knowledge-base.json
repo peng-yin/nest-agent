@@ -1,0 +1,36 @@
+{
+  "documents": [
+    {
+      "content": "NestJS 是一个用于构建高效、可靠和可扩展的服务端应用程序的 Node.js 框架。它使用 TypeScript 构建，结合了 OOP（面向对象编程）、FP（函数式编程）和 FRP（函数式响应式编程）的元素。NestJS 底层使用 Express 或 Fastify，提供了开箱即用的模块化架构，支持依赖注入、中间件、管道、守卫和拦截器等特性。",
+      "metadata": { "source": "nestjs-docs", "category": "框架", "language": "zh" }
+    },
+    {
+      "content": "Milvus 是一款开源的向量数据库，专为 AI 应用中的向量相似性搜索而设计。它支持万亿级向量数据的实时搜索，提供多种索引类型如 IVF_FLAT、HNSW、ANNOY 等。Milvus 广泛应用于推荐系统、图像搜索、自然语言处理和 RAG（检索增强生成）等场景。",
+      "metadata": { "source": "milvus-docs", "category": "数据库", "language": "zh" }
+    },
+    {
+      "content": "LangChain 是一个用于开发由大语言模型驱动的应用程序的框架。它提供了链（Chain）、代理（Agent）、记忆（Memory）等抽象概念，以及对多种 LLM 提供商的统一接口。LangChain 支持文档加载、文本分割、向量存储和检索等 RAG 工作流。",
+      "metadata": { "source": "langchain-docs", "category": "框架", "language": "zh" }
+    },
+    {
+      "content": "RAG（Retrieval-Augmented Generation）检索增强生成是一种结合了信息检索和文本生成的技术。它的核心流程包括：1）将文档分块并通过 Embedding 模型转换为向量；2）存储到向量数据库中；3）当用户提问时，先在向量数据库中检索最相关的文档片段；4）将检索到的内容作为上下文注入 LLM 提示词中，生成更准确的回答。",
+      "metadata": { "source": "rag-tutorial", "category": "技术", "language": "zh" }
+    },
+    {
+      "content": "Docker 是一个开源的容器化平台，用于自动化应用程序的部署、扩展和管理。Docker 使用容器来打包应用程序及其依赖项，确保在任何环境中都能一致地运行。多阶段构建（Multi-stage Build）是 Docker 的高级特性，可以优化镜像大小，将构建环境与运行环境分离。",
+      "metadata": { "source": "docker-docs", "category": "运维", "language": "zh" }
+    },
+    {
+      "content": "TypeScript 是 JavaScript 的超集，添加了静态类型检查和其他特性。它由微软开发和维护，编译为纯 JavaScript。TypeScript 支持接口、泛型、装饰器、枚举等高级类型特性，是构建大型应用程序的首选语言。NestJS、Angular 等框架都使用 TypeScript 作为主要开发语言。",
+      "metadata": { "source": "typescript-docs", "category": "语言", "language": "zh" }
+    },
+    {
+      "content": "pnpm 是一个快速、节省磁盘空间的 Node.js 包管理器。它使用内容寻址存储来避免重复安装相同的包，支持 workspace 功能用于管理 monorepo 项目。相比 npm 和 yarn，pnpm 的安装速度更快，磁盘使用更高效，且对 node_modules 目录结构有更严格的控制。",
+      "metadata": { "source": "pnpm-docs", "category": "工具", "language": "zh" }
+    },
+    {
+      "content": "Redis 是一个开源的内存数据结构存储系统，可用作数据库、缓存和消息中间件。它支持字符串、哈希、列表、集合、有序集合等数据结构，提供持久化、主从复制、Sentinel 高可用和 Cluster 集群等特性。在 NestJS 中，Redis 常用于会话管理、缓存和实时消息推送。",
+      "metadata": { "source": "redis-docs", "category": "数据库", "language": "zh" }
+    }
+  ]
+}

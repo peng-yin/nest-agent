@@ -1,0 +1,31 @@
+{
+  "name": "代码编写+审查流程",
+  "description": "先让 coder 写代码，再让 reviewer 审查",
+  "nodes": [
+    { "id": "start", "name": "开始", "type": "start", "config": {} },
+    {
+      "id": "write-code",
+      "name": "coder",
+      "type": "agent",
+      "config": {
+        "prompt": "你是一个代码编写专家，根据用户需求编写高质量的代码",
+        "tools": ["code_interpreter"]
+      }
+    },
+    {
+      "id": "review-code",
+      "name": "reviewer",
+      "type": "agent",
+      "config": {
+        "prompt": "你是一个代码审查专家，审查上一步产出的代码，指出问题并给出改进建议",
+        "tools": []
+      }
+    },
+    { "id": "end", "name": "结束", "type": "end", "config": {} }
+  ],
+  "edges": [
+    { "source": "start", "target": "write-code" },
+    { "source": "write-code", "target": "review-code" },
+    { "source": "review-code", "target": "end" }
+  ]
+}

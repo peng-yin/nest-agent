@@ -1,0 +1,11 @@
+node_modules
+dist
+web/node_modules
+web/dist
+.env
+.sandbox
+.playwright-mcp
+coverage
+*.log
+*.md
+.git
