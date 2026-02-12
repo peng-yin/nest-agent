@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -24,7 +26,8 @@ import {
   Sparkles,
   User,
   Wrench,
-  ChevronRight,
+  CheckCircle2,
+  ExternalLink,
 } from "lucide-react";
 
 interface StreamState {
@@ -264,10 +267,10 @@ export default function ChatPage() {
       </div>
 
       {/* Main chat area */}
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col overflow-hidden">
         {/* Messages */}
-        <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-          <div className="mx-auto max-w-3xl space-y-4">
+        <ScrollArea className="flex-1" ref={scrollRef}>
+          <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
             {messages.map((msg) => (
               <MessageBubble key={msg.id} message={msg} />
             ))}
@@ -283,7 +286,7 @@ export default function ChatPage() {
         </ScrollArea>
 
         {/* Input area */}
-        <div className="border-t p-4">
+        <div className="border-t bg-background/80 backdrop-blur-sm p-4">
           <div className="mx-auto flex max-w-3xl gap-2">
             <Textarea
               value={input}
@@ -303,19 +306,83 @@ export default function ChatPage() {
   );
 }
 
+function MarkdownContent({ content }: { content: string }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        a: ({ href, children }) => (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-0.5 text-primary underline underline-offset-2 hover:text-primary/80 break-all"
+          >
+            {children}
+            <ExternalLink className="inline h-3 w-3 shrink-0" />
+          </a>
+        ),
+        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+        ul: ({ children }) => <ul className="mb-2 list-disc pl-5 space-y-1">{children}</ul>,
+        ol: ({ children }) => <ol className="mb-2 list-decimal pl-5 space-y-1">{children}</ol>,
+        li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+        code: ({ className, children, ...props }) => {
+          const isBlock = className?.includes("language-");
+          if (isBlock) {
+            return (
+              <pre className="my-2 overflow-x-auto rounded-md bg-zinc-900 p-3 text-xs text-zinc-100">
+                <code className={className} {...props}>{children}</code>
+              </pre>
+            );
+          }
+          return (
+            <code className="rounded bg-muted px-1 py-0.5 text-xs font-mono" {...props}>
+              {children}
+            </code>
+          );
+        },
+        pre: ({ children }) => <>{children}</>,
+        blockquote: ({ children }) => (
+          <blockquote className="border-l-2 border-muted-foreground/30 pl-3 italic text-muted-foreground">
+            {children}
+          </blockquote>
+        ),
+        strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+        h1: ({ children }) => <h1 className="mb-2 text-lg font-bold">{children}</h1>,
+        h2: ({ children }) => <h2 className="mb-2 text-base font-bold">{children}</h2>,
+        h3: ({ children }) => <h3 className="mb-1 text-sm font-bold">{children}</h3>,
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+}
+
 function MessageBubble({ message }: { message: Message }) {
   const isUser = message.role === "user";
   return (
     <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""}`}>
-      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-        isUser ? "bg-primary text-primary-foreground" : "bg-muted"
-      }`}>
+      <div
+        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+          isUser ? "bg-primary text-primary-foreground" : "bg-gradient-to-br from-violet-500 to-indigo-500 text-white"
+        }`}
+      >
         {isUser ? <User className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
       </div>
-      <div className={`max-w-[80%] rounded-lg px-4 py-2.5 text-sm leading-relaxed ${
-        isUser ? "bg-primary text-primary-foreground" : "bg-muted"
-      }`}>
-        <div className="whitespace-pre-wrap">{message.content}</div>
+      <div
+        className={`min-w-0 rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+          isUser
+            ? "max-w-[75%] bg-primary text-primary-foreground"
+            : "max-w-full bg-muted/60"
+        }`}
+      >
+        {isUser ? (
+          <div className="whitespace-pre-wrap break-words">{message.content}</div>
+        ) : (
+          <div className="prose-sm break-words overflow-hidden">
+            <MarkdownContent content={message.content} />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -323,42 +390,55 @@ function MessageBubble({ message }: { message: Message }) {
 
 function StreamingBubble({ state }: { state: StreamState }) {
   return (
-    <div className="space-y-2">
-      {/* Steps & tools */}
+    <div className="space-y-3">
+      {/* Steps */}
       {state.steps.map((step) => (
         <div key={step.name} className="flex items-center gap-2 text-xs text-muted-foreground">
           {step.done ? (
-            <ChevronRight className="h-3 w-3" />
+            <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
           ) : (
-            <Loader2 className="h-3 w-3 animate-spin" />
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
           )}
-          <span>Agent: {step.name}</span>
+          <span className="font-medium">Agent: {step.name}</span>
         </div>
       ))}
+
+      {/* Tool calls */}
       {state.toolCalls.map((tc) => (
-        <div key={tc.id} className="rounded-md border bg-muted/50 p-2 text-xs">
-          <div className="flex items-center gap-1.5 font-medium text-muted-foreground">
-            <Wrench className="h-3 w-3" />
-            {tc.name}
-            {!tc.done && <Loader2 className="h-3 w-3 animate-spin" />}
+        <div key={tc.id} className="rounded-lg border border-border/50 bg-muted/30 p-3 text-xs">
+          <div className="flex items-center gap-1.5 font-medium text-foreground/80">
+            <Wrench className="h-3.5 w-3.5 text-orange-500" />
+            <span>{tc.name}</span>
+            {!tc.done ? (
+              <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+            ) : (
+              <CheckCircle2 className="h-3 w-3 text-green-500" />
+            )}
           </div>
           {tc.args && (
-            <pre className="mt-1 max-h-20 overflow-auto text-muted-foreground">{tc.args}</pre>
+            <pre className="mt-1.5 max-h-20 overflow-auto rounded bg-muted/50 p-1.5 text-muted-foreground whitespace-pre-wrap break-all">
+              {tc.args}
+            </pre>
           )}
           {tc.result && (
-            <pre className="mt-1 max-h-20 overflow-auto border-t pt-1 text-muted-foreground">{tc.result.slice(0, 200)}</pre>
+            <pre className="mt-1.5 max-h-20 overflow-auto rounded bg-muted/50 p-1.5 text-muted-foreground border-t border-border/30 whitespace-pre-wrap break-all">
+              {tc.result.slice(0, 300)}
+            </pre>
           )}
         </div>
       ))}
+
       {/* Streaming text */}
       {state.currentText && (
         <div className="flex gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 text-white">
             <Sparkles className="h-4 w-4" />
           </div>
-          <div className="max-w-[80%] rounded-lg bg-muted px-4 py-2.5 text-sm leading-relaxed">
-            <div className="whitespace-pre-wrap">{state.currentText}</div>
-            <span className="inline-block h-4 w-1 animate-pulse bg-foreground" />
+          <div className="min-w-0 max-w-full rounded-2xl bg-muted/60 px-4 py-3 text-sm leading-relaxed">
+            <div className="prose-sm break-words overflow-hidden">
+              <MarkdownContent content={state.currentText} />
+            </div>
+            <span className="mt-1 inline-block h-4 w-0.5 animate-pulse rounded-full bg-foreground/60" />
           </div>
         </div>
       )}

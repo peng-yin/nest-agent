@@ -71,9 +71,17 @@ export class ChatController {
 
     // 获取或创建会话（threadId）
     let threadId = dto.conversationId;
+    let needsTitle = false;
     if (!threadId) {
       const conv = await this.chatService.createConversation(user.id, tenantId, undefined, dto.workflowId);
       threadId = conv.id;
+      needsTitle = true;
+    } else {
+      // 已有对话但标题还是默认值，说明是首次发送消息
+      const conv = await this.chatService.getConversation(threadId, tenantId);
+      if (conv && conv.title === 'New Conversation') {
+        needsTitle = true;
+      }
     }
 
     const runId = genId();
@@ -117,6 +125,11 @@ export class ChatController {
         if (msg.content && msg.role === 'assistant') {
           await this.chatService.addMessage(threadId, tenantId, 'assistant', msg.content, lastStepName);
         }
+      }
+
+      // 新对话首条消息后自动生成标题（异步，不阻塞响应）
+      if (needsTitle) {
+        this.chatService.generateTitle(threadId, tenantId, dto.message).catch(() => {});
       }
     } catch (error: any) {
       this.logger.error(`Chat completion error: ${error.message}`, error.stack);

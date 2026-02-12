@@ -3,6 +3,7 @@ import { StateGraph, MessagesAnnotation, Command, START, END } from '@langchain/
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { StructuredToolInterface } from '@langchain/core/tools';
+import { RunnableConfig } from '@langchain/core/runnables';
 import { z } from 'zod';
 
 export interface AgentDefinition {
@@ -38,11 +39,11 @@ export class SupervisorFactory {
       agents.map((a) => `- ${a.name}: ${a.prompt}`).join('\n');
 
     // Supervisor 路由节点
-    const supervisorNode = async (state: typeof MessagesAnnotation.State) => {
+    const supervisorNode = async (state: typeof MessagesAnnotation.State, config?: RunnableConfig) => {
       const response = await llm.withStructuredOutput(routeSchema).invoke([
         { role: 'system', content: systemPrompt },
         ...state.messages,
-      ]);
+      ], config);
 
       const goto = response.next === 'RESPOND' ? 'responder' : response.next === '__end__' ? END : response.next;
       return new Command({
@@ -54,12 +55,12 @@ export class SupervisorFactory {
     };
 
     // 直接回复节点
-    const responderNode = async (state: typeof MessagesAnnotation.State) => {
+    const responderNode = async (state: typeof MessagesAnnotation.State, config?: RunnableConfig) => {
       const filtered = state.messages.filter((m: any) => !(typeof m.content === 'string' && m.content.startsWith('[Supervisor]')));
       const response = await llm.invoke([
         { role: 'system', content: 'You are a helpful AI assistant. Answer naturally. Respond in the same language as the user.' },
         ...filtered,
-      ]);
+      ], config);
       return new Command({ goto: END, update: { messages: [response] } });
     };
 
@@ -79,8 +80,8 @@ export class SupervisorFactory {
 
       graph.addNode(
         agentDef.name,
-        async (state: typeof MessagesAnnotation.State) => {
-          const result = await reactAgent.invoke({ messages: state.messages });
+        async (state: typeof MessagesAnnotation.State, config?: RunnableConfig) => {
+          const result = await reactAgent.invoke({ messages: state.messages }, config);
           return new Command({ goto: 'supervisor', update: { messages: result.messages } });
         },
         { ends: ['supervisor'] },

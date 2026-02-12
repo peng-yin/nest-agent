@@ -60,6 +60,31 @@ export class ChatService {
     await this.redisService.del(MSG_KEY(id));
   }
 
+  /**
+   * 根据用户第一条消息自动生成对话标题
+   */
+  async generateTitle(conversationId: string, tenantId: string, userMessage: string) {
+    try {
+      const llm = this.llmService.createModel({ streaming: false, temperature: 0.3 });
+      const result = await llm.invoke([
+        {
+          role: 'system',
+          content:
+            '根据用户的消息，生成一个简短的对话标题（不超过15个字）。直接输出标题文本，不要加引号或其他标点。用与用户消息相同的语言。',
+        },
+        { role: 'user', content: userMessage },
+      ] as any);
+      const title = typeof result.content === 'string' ? result.content.trim().slice(0, 50) : '';
+      if (title) {
+        await this.convRepo.update({ id: conversationId, tenantId }, { title });
+        await this.redisService.del(CONV_KEY(conversationId));
+        this.logger.log(`Title generated for ${conversationId}: ${title}`);
+      }
+    } catch (err: any) {
+      this.logger.error(`Title generation failed: ${err.message}`);
+    }
+  }
+
   // ─── 消息 ───
 
   async addMessage(conversationId: string, tenantId: string, role: MessageRole, content: string, agentName?: string) {
