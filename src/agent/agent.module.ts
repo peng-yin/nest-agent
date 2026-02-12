@@ -6,9 +6,10 @@ import { SupervisorFactory } from './supervisor.factory';
 import { DagEngine } from './dag-engine';
 import { WorkflowService } from './workflow.service';
 import { WorkflowController } from './workflow.controller';
+import { RagModule } from '../rag/rag.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Workflow])],
+  imports: [TypeOrmModule.forFeature([Workflow]), RagModule],
   controllers: [WorkflowController],
   providers: [AgentService, SupervisorFactory, DagEngine, WorkflowService],
   exports: [AgentService, WorkflowService],

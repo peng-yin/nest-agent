@@ -31,7 +31,8 @@ export class SupervisorFactory {
       `You are a team supervisor managing agents: ${agentNames.join(', ')}.\n\n` +
       `Rules:\n` +
       `- Route to the appropriate agent for specialized tasks.\n` +
-      `- Choose RESPOND for general questions or simple conversations.\n` +
+      `- If the user mentions "知识库" (knowledge base), internal documents, or asks to search/retrieve information, ALWAYS route to the researcher agent.\n` +
+      `- Choose RESPOND only for general greetings or simple conversations that don't need any tools.\n` +
       `- Choose __end__ when a sub-agent has already provided a complete answer.\n\n` +
       `Agents:\n` +
       agents.map((a) => `- ${a.name}: ${a.prompt}`).join('\n');

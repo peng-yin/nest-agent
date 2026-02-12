@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import configuration from './common/config/configuration';
@@ -45,7 +44,6 @@ import { Workflow } from './entities/workflow.entity';
       }),
       inject: [ConfigService],
     }),
-    EventEmitterModule.forRoot(),
     RedisModule,
     AuthModule,
     LLMModule,

@@ -21,7 +21,7 @@ import {
   Trash2,
   MessageSquare,
   Loader2,
-  Bot,
+  Sparkles,
   User,
   Wrench,
   ChevronRight,
@@ -274,7 +274,7 @@ export default function ChatPage() {
             {streamState && <StreamingBubble state={streamState} />}
             {messages.length === 0 && !streamState && (
               <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                <Bot className="mb-4 h-12 w-12" />
+                <Sparkles className="mb-4 h-12 w-12" />
                 <p className="text-lg font-medium">开始一段对话</p>
                 <p className="text-sm">发送消息与 AI Agent 交互</p>
               </div>
@@ -310,7 +310,7 @@ function MessageBubble({ message }: { message: Message }) {
       <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
         isUser ? "bg-primary text-primary-foreground" : "bg-muted"
       }`}>
-        {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+        {isUser ? <User className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
       </div>
       <div className={`max-w-[80%] rounded-lg px-4 py-2.5 text-sm leading-relaxed ${
         isUser ? "bg-primary text-primary-foreground" : "bg-muted"
@@ -354,7 +354,7 @@ function StreamingBubble({ state }: { state: StreamState }) {
       {state.currentText && (
         <div className="flex gap-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
-            <Bot className="h-4 w-4" />
+            <Sparkles className="h-4 w-4" />
           </div>
           <div className="max-w-[80%] rounded-lg bg-muted px-4 py-2.5 text-sm leading-relaxed">
             <div className="whitespace-pre-wrap">{state.currentText}</div>

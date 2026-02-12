@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,8 +24,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { kbApi, KnowledgeBase } from "@/lib/api";
-import { Plus, Trash2, Database, Search, Upload, FileJson, Loader2 } from "lucide-react";
+import { Plus, Trash2, Database, Search, Upload, FileJson, Loader2, FileText, CheckCircle2, XCircle } from "lucide-react";
 
 export default function KnowledgePage() {
   const [kbs, setKbs] = useState<KnowledgeBase[]>([]);
@@ -93,8 +94,10 @@ function KBCard({ kb, onDelete }: { kb: KnowledgeBase; onDelete: () => void }) {
   const [searching, setSearching] = useState(false);
   const [docContent, setDocContent] = useState("");
   const [uploading, setUploading] = useState(false);
-  const [uploadMsg, setUploadMsg] = useState("");
-  const fileInputRef = useState<HTMLInputElement | null>(null);
+  const [uploadMsg, setUploadMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -109,30 +112,39 @@ function KBCard({ kb, onDelete }: { kb: KnowledgeBase; onDelete: () => void }) {
     }
   };
 
+  const resetDialog = () => {
+    setDocContent("");
+    setSelectedFile(null);
+    setUploadMsg(null);
+  };
+
   const handleUploadText = async () => {
     if (!docContent.trim()) return;
     setUploading(true);
-    setUploadMsg("");
+    setUploadMsg(null);
     try {
       const res = await kbApi.addDocuments(kb.id, [{ content: docContent }]);
-      setUploadMsg(`成功创建 ${res.chunksCreated} 个文档块`);
+      setUploadMsg({ ok: true, text: `成功创建 ${res.chunksCreated} 个文档块` });
       setDocContent("");
     } catch (e: any) {
-      setUploadMsg(`上传失败: ${e.message}`);
+      setUploadMsg({ ok: false, text: e.message });
     } finally {
       setUploading(false);
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (file) setSelectedFile(file);
     e.target.value = "";
+  };
 
+  const handleFileUpload = async () => {
+    if (!selectedFile) return;
     setUploading(true);
-    setUploadMsg("");
+    setUploadMsg(null);
     try {
-      const text = await file.text();
+      const text = await selectedFile.text();
       const json = JSON.parse(text);
 
       let docs: { content: string; metadata?: Record<string, unknown> }[] = [];
@@ -146,15 +158,16 @@ function KBCard({ kb, onDelete }: { kb: KnowledgeBase; onDelete: () => void }) {
       } else if (json.content) {
         docs = [{ content: json.content, ...(json.metadata ? { metadata: json.metadata } : {}) }];
       } else {
-        throw new Error("不支持的 JSON 格式，需要 { documents: [...] } 或数组格式");
+        throw new Error("不支持的 JSON 格式");
       }
 
       if (docs.length === 0) throw new Error("JSON 中没有文档内容");
 
       const res = await kbApi.addDocuments(kb.id, docs);
-      setUploadMsg(`从 ${file.name} 导入 ${docs.length} 篇文档，创建 ${res.chunksCreated} 个文档块`);
+      setUploadMsg({ ok: true, text: `从 ${selectedFile.name} 导入 ${docs.length} 篇文档，创建 ${res.chunksCreated} 个文档块` });
+      setSelectedFile(null);
     } catch (err: any) {
-      setUploadMsg(`上传失败: ${err.message}`);
+      setUploadMsg({ ok: false, text: err.message });
     } finally {
       setUploading(false);
     }
@@ -188,8 +201,8 @@ function KBCard({ kb, onDelete }: { kb: KnowledgeBase; onDelete: () => void }) {
         </AlertDialog>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* Upload */}
-        <Dialog>
+        {/* Upload Dialog */}
+        <Dialog open={dialogOpen} onOpenChange={(v) => { setDialogOpen(v); if (!v) resetDialog(); }}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm" className="w-full gap-1.5">
               <Upload className="h-3.5 w-3.5" /> 添加文档
@@ -200,66 +213,74 @@ function KBCard({ kb, onDelete }: { kb: KnowledgeBase; onDelete: () => void }) {
               <DialogTitle>添加文档到「{kb.name}」</DialogTitle>
             </DialogHeader>
 
-            <div className="space-y-4">
-              {/* JSON file upload */}
-              <div>
+            <Tabs defaultValue="file" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="file" className="gap-1.5">
+                  <FileJson className="h-3.5 w-3.5" /> JSON 文件
+                </TabsTrigger>
+                <TabsTrigger value="text" className="gap-1.5">
+                  <FileText className="h-3.5 w-3.5" /> 手动输入
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Tab: JSON file */}
+              <TabsContent value="file" className="space-y-3 mt-3">
                 <input
+                  ref={fileInputRef}
                   type="file"
                   accept=".json"
                   className="hidden"
-                  id={`file-upload-${kb.id}`}
-                  onChange={handleFileUpload}
+                  onChange={handleFileSelect}
                 />
-                <label htmlFor={`file-upload-${kb.id}`}>
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2 cursor-pointer"
-                    asChild
-                    disabled={uploading}
-                  >
-                    <span>
-                      <FileJson className="h-4 w-4" />
-                      上传 JSON 文件
-                    </span>
-                  </Button>
-                </label>
-                <p className="mt-1.5 text-xs text-muted-foreground">
-                  支持格式：{"{ \"documents\": [{ \"content\": \"...\", \"metadata\": {} }] }"}
-                </p>
-              </div>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 cursor-pointer transition-colors hover:border-primary hover:bg-muted/50"
+                >
+                  <FileJson className="h-8 w-8 text-muted-foreground" />
+                  {selectedFile ? (
+                    <p className="text-sm font-medium">{selectedFile.name}</p>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium">点击选择 JSON 文件</p>
+                      <p className="text-xs text-muted-foreground">
+                        {"{ \"documents\": [{ \"content\": \"...\", \"metadata\": {} }] }"}
+                      </p>
+                    </>
+                  )}
                 </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">或手动输入</span>
-                </div>
-              </div>
+                <Button
+                  className="w-full"
+                  onClick={handleFileUpload}
+                  disabled={uploading || !selectedFile}
+                >
+                  {uploading ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> 上传中...</> : "上传文件"}
+                </Button>
+              </TabsContent>
 
-              {/* Manual text input */}
-              <Textarea
-                rows={6}
-                value={docContent}
-                onChange={(e) => setDocContent(e.target.value)}
-                placeholder="粘贴文档内容..."
-              />
-            </div>
+              {/* Tab: manual text */}
+              <TabsContent value="text" className="space-y-3 mt-3">
+                <Textarea
+                  rows={6}
+                  value={docContent}
+                  onChange={(e) => setDocContent(e.target.value)}
+                  placeholder="粘贴文档内容..."
+                />
+                <Button
+                  className="w-full"
+                  onClick={handleUploadText}
+                  disabled={uploading || !docContent.trim()}
+                >
+                  {uploading ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> 上传中...</> : "上传文本"}
+                </Button>
+              </TabsContent>
+            </Tabs>
 
             {uploadMsg && (
-              <p className={`text-sm ${uploadMsg.startsWith("上传失败") ? "text-destructive" : "text-green-600"}`}>
-                {uploadMsg}
-              </p>
+              <div className={`flex items-start gap-2 rounded-md p-3 text-sm ${uploadMsg.ok ? "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300" : "bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300"}`}>
+                {uploadMsg.ok ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> : <XCircle className="mt-0.5 h-4 w-4 shrink-0" />}
+                <span>{uploadMsg.text}</span>
+              </div>
             )}
-
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline">取消</Button>
-              </DialogClose>
-              <Button onClick={handleUploadText} disabled={uploading || !docContent.trim()}>
-                {uploading ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> 上传中...</> : "上传文本"}
-              </Button>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
 

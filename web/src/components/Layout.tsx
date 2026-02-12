@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { MessageSquare, GitBranch, Database, LogOut, Bot } from "lucide-react";
+import { MessageSquare, GitBranch, Database, LogOut, Sparkles } from "lucide-react";
 
 const navItems = [
   { to: "/", icon: MessageSquare, label: "对话" },
@@ -31,7 +31,7 @@ export default function Layout() {
       <header className="flex h-14 items-center justify-between border-b px-4">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2 font-semibold">
-            <Bot className="h-5 w-5 text-primary" />
+            <Sparkles className="h-5 w-5 text-primary" />
             <span>Nest Agent</span>
           </div>
           <nav className="flex items-center gap-1">

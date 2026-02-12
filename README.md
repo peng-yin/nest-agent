@@ -30,9 +30,10 @@
 ### RAG 知识库
 
 - 文档分块（RecursiveCharacterTextSplitter）
-- OpenAI Embedding 向量化
-- Milvus 向量检索
+- BAAI/bge-m3 Embedding 向量化（1024 维，通过 OpenAI 兼容 API）
+- Milvus 向量检索（IVF_FLAT + COSINE）
 - 按租户隔离的知识库管理
+- 支持 JSON 文件批量导入文档
 
 ### 工具系统
 
@@ -55,6 +56,34 @@ JWT 认证 + TenantGuard，所有数据按 tenantId 隔离。
 
 ---
 
+## 功能截图
+
+### 认证
+
+| 登录 | 注册 |
+|------|------|
+| ![登录](./docs/screenshots/login.png) | ![注册](./docs/screenshots/register.png) |
+
+### AI 对话
+
+| 对话首页 | 流式输出 | 工具调用结果 |
+|----------|----------|-------------|
+| ![对话首页](./docs/screenshots/chat-home.png) | ![流式输出](./docs/screenshots/chat-streaming.png) | ![工具调用](./docs/screenshots/chat-conversation.png) |
+
+### 工作流管理
+
+| 工作流列表 | 创建工作流 |
+|-----------|-----------|
+| ![工作流列表](./docs/screenshots/workflow-list.png) | ![创建工作流](./docs/screenshots/workflow-create.png) |
+
+### 知识库
+
+| 知识库列表 | 语义检索 |
+|-----------|----------|
+| ![知识库列表](./docs/screenshots/knowledge-list.png) | ![语义检索](./docs/screenshots/knowledge-search.png) |
+
+---
+
 ## 技术栈
 
 | 层次 | 技术 |
@@ -66,6 +95,8 @@ JWT 认证 + TenantGuard，所有数据按 tenantId 隔离。
 | 向量库 | Milvus 2.3 |
 | 认证 | Passport JWT |
 | 参数校验 | Zod |
+| 前端 | React 18 + shadcn/ui + Vite |
+| 包管理 | pnpm workspace (monorepo) |
 
 ---
 
@@ -78,26 +109,41 @@ JWT 认证 + TenantGuard，所有数据按 tenantId 隔离。
 - Redis 7
 - Milvus 2.3（可选，RAG 功能需要）
 
-### Docker 一键启动
+### Docker 一键启动（生产模式）
 
 ```bash
+# .env 中将 MYSQL_HOST/REDIS_HOST/MILVUS_HOST 改为容器名（mysql/redis/milvus-standalone）
 docker-compose up -d
 ```
 
-会启动 MySQL、Redis、Milvus 及应用本身。
+会启动 MySQL、Redis、Milvus 及应用本身（前后端一体，端口 3000）。
 
 ### 本地开发
 
 ```bash
-# 安装依赖
+# 1. 启动基础设施
+docker-compose up -d mysql redis etcd minio milvus-standalone
+
+# 2. 等待服务就绪
+docker-compose ps  # 确认 mysql/redis 为 healthy，milvus 为 running
+
+# 3. 安装依赖
 pnpm install
 
-# 配置环境变量
+# 4. 配置环境变量
 cp .env.example .env
-# 编辑 .env 填入 LLM API Key 等
+# 编辑 .env，填入：
+#   MYSQL_PORT=3307（docker-compose 映射到宿主机的端口）
+#   REDIS_PORT=6380（docker-compose 映射到宿主机的端口）
+#   OPENAI_API_KEY=你的 API Key
+#   OPENAI_BASE_URL=https://api.siliconflow.cn/v1（如用 SiliconFlow）
+#   TAVILY_API_KEY=你的 Key（可选，用于 web_search 工具）
 
-# 启动开发模式
-pnpm start:dev
+# 5. 启动后端（热重载）
+pnpm dev            # http://localhost:3000
+
+# 6. 启动前端（另开终端）
+pnpm dev:web        # http://localhost:5173，自动代理 /api → localhost:3000
 ```
 
 ### 环境变量
@@ -138,14 +184,23 @@ pnpm start:dev
 ## 项目结构
 
 ```
-src/
-├── auth/           # JWT 认证 + 多租户守卫
-├── chat/           # 对话管理 + SSE 流式接口
-├── agent/          # 核心：Supervisor 路由 + DAG 引擎
-├── rag/            # RAG 知识库（Milvus 向量检索）
-├── llm/            # 多 LLM 供应商抽象
-├── tools/          # 工具注册中心（搜索、RAG 检索）
-├── redis/          # Redis 缓存
-├── entities/       # TypeORM 实体
-└── common/         # AG-UI 协议、配置、异常过滤器
+nest-agent/
+├── src/                # 后端（NestJS）
+│   ├── auth/           # JWT 认证 + 多租户守卫
+│   ├── chat/           # 对话管理 + SSE 流式接口
+│   ├── agent/          # 核心：Supervisor 路由 + DAG 引擎
+│   ├── rag/            # RAG 知识库（Milvus 向量检索）
+│   ├── llm/            # 多 LLM 供应商抽象
+│   ├── tools/          # 工具注册中心（搜索、RAG 检索）
+│   ├── redis/          # Redis 缓存
+│   ├── entities/       # TypeORM 实体
+│   └── common/         # AG-UI 协议、配置、异常过滤器
+├── web/                # 前端（React + shadcn/ui + Vite）
+│   └── src/
+│       ├── pages/      # 页面：对话、工作流、知识库、登录
+│       ├── components/ # UI 组件
+│       └── lib/        # API 封装、认证上下文
+├── Dockerfile          # 多阶段构建（pnpm monorepo）
+├── docker-compose.yml  # 基础设施编排
+└── pnpm-workspace.yaml # monorepo 配置
 ```

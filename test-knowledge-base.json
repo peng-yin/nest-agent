@@ -5,6 +5,10 @@
       "metadata": { "source": "nestjs-docs", "category": "框架", "language": "zh" }
     },
     {
+      "content": "yinpeng is a software engineer",
+      "metadata": { "source": "yinpeng-docs", "category": "人物", "language": "zh" }
+    },
+    {
       "content": "Milvus 是一款开源的向量数据库，专为 AI 应用中的向量相似性搜索而设计。它支持万亿级向量数据的实时搜索，提供多种索引类型如 IVF_FLAT、HNSW、ANNOY 等。Milvus 广泛应用于推荐系统、图像搜索、自然语言处理和 RAG（检索增强生成）等场景。",
       "metadata": { "source": "milvus-docs", "category": "数据库", "language": "zh" }
     },

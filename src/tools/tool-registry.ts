@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { StructuredToolInterface } from '@langchain/core/tools';
 import { webSearchTool } from './web-search.tool';
-import { createRagRetrievalTool } from './rag-retrieval.tool';
 
 @Injectable()
 export class ToolRegistry {
@@ -19,13 +18,6 @@ export class ToolRegistry {
 
   register(tool: StructuredToolInterface) {
     this.tools.set(tool.name, tool);
-  }
-
-  /** 注册 RAG 工具（在 Milvus 连接后调用） */
-  registerRagTool(vectorStore: any) {
-    const ragTool = createRagRetrievalTool(vectorStore);
-    this.register(ragTool);
-    this.logger.log('Registered RAG retrieval tool');
   }
 
   get(name: string): StructuredToolInterface | undefined {
