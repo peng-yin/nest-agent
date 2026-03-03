@@ -177,6 +177,27 @@ export interface KnowledgeBase {
   createdAt: string;
 }
 
+export interface UploadResult {
+  chunksCreated: number;
+  fileName: string;
+  documentsLoaded: number;
+}
+
+export interface BatchUploadResult {
+  results: Array<{
+    fileName: string;
+    chunksCreated: number;
+    documentsLoaded: number;
+    error?: string;
+  }>;
+}
+
+export interface LoadUrlResult {
+  chunksCreated: number;
+  url: string;
+  documentsLoaded: number;
+}
+
 export const kbApi = {
   list: () => request<KnowledgeBase[]>("/knowledge-bases"),
   create: (data: { name: string; description?: string; chunkSize?: number; chunkOverlap?: number }) =>
@@ -186,6 +207,54 @@ export const kbApi = {
       method: "POST",
       body: JSON.stringify({ documents }),
     }),
+
+  /** 上传单个文件（PDF/TXT/MD/CSV/HTML/JSON） */
+  uploadFile: async (id: string, file: File): Promise<UploadResult> => {
+    const token = getToken();
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch(`${BASE}/knowledge-bases/${id}/upload`, {
+      method: "POST",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: res.statusText }));
+      throw new Error(err.message || res.statusText);
+    }
+    return res.json();
+  },
+
+  /** 批量上传文件 */
+  uploadFiles: async (id: string, files: File[]): Promise<BatchUploadResult> => {
+    const token = getToken();
+    const formData = new FormData();
+    files.forEach((f) => formData.append("files", f));
+
+    const res = await fetch(`${BASE}/knowledge-bases/${id}/upload-batch`, {
+      method: "POST",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: res.statusText }));
+      throw new Error(err.message || res.statusText);
+    }
+    return res.json();
+  },
+
+  /** 从 URL 加载网页内容 */
+  loadUrl: (id: string, url: string) =>
+    request<LoadUrlResult>(`/knowledge-bases/${id}/load-url`, {
+      method: "POST",
+      body: JSON.stringify({ url }),
+    }),
+
   search: (id: string, query: string, topK?: number) =>
     request<{ text: string; metadata: Record<string, unknown>; score: number }[]>(
       `/knowledge-bases/${id}/search`,

@@ -29,11 +29,12 @@
 
 ### RAG 知识库
 
+- 多格式文档加载：PDF（pdf-parse）、TXT、MD、CSV、HTML、JSON 文件上传，支持 URL 网页抓取（cheerio）
 - 文档分块（RecursiveCharacterTextSplitter）
 - BAAI/bge-m3 Embedding 向量化（1024 维，通过 OpenAI 兼容 API）
 - Milvus 向量检索（IVF_FLAT + COSINE）
 - 按租户隔离的知识库管理
-- 支持 JSON 文件批量导入文档
+- 支持单文件上传、批量上传（最多 10 个）、URL 网页加载、JSON 批量导入
 
 ### 工具系统
 
@@ -93,6 +94,7 @@ JWT 认证 + TenantGuard，所有数据按 tenantId 隔离。
 | 数据库 | MySQL 8.0 (TypeORM) |
 | 缓存 | Redis 7 (ioredis) |
 | 向量库 | Milvus 2.3 |
+| 文档加载 | pdf-parse + cheerio |
 | 认证 | Passport JWT |
 | 参数校验 | Zod |
 | 前端 | React 18 + shadcn/ui + Vite |
@@ -174,7 +176,10 @@ pnpm dev:web        # http://localhost:5173，自动代理 /api → localhost:30
 | | `POST/GET/DELETE /api/v1/chat/conversations` | 会话管理 |
 | 工作流 | `POST/GET/PUT/DELETE /api/v1/workflows` | 工作流 CRUD |
 | 知识库 | `POST/GET/DELETE /api/v1/knowledge-bases` | 知识库管理 |
-| | `POST /api/v1/knowledge-bases/:id/documents` | 添加文档 |
+| | `POST /api/v1/knowledge-bases/:id/documents` | 添加文档（文本） |
+| | `POST /api/v1/knowledge-bases/:id/upload` | 上传文件（PDF/TXT/MD/CSV/HTML/JSON） |
+| | `POST /api/v1/knowledge-bases/:id/upload-batch` | 批量上传（最多 10 个） |
+| | `POST /api/v1/knowledge-bases/:id/load-url` | 加载网页内容 |
 | | `POST /api/v1/knowledge-bases/:id/search` | 语义检索 |
 
 完整 API 文档见 [API.md](./API.md)，架构设计见 [架构.md](./架构.md)。
@@ -189,7 +194,7 @@ nest-agent/
 │   ├── auth/           # JWT 认证 + 多租户守卫
 │   ├── chat/           # 对话管理 + SSE 流式接口
 │   ├── agent/          # 核心：Supervisor 路由 + DAG 引擎
-│   ├── rag/            # RAG 知识库（Milvus 向量检索）
+│   ├── rag/            # RAG 知识库（文档加载 + Milvus 向量检索）
 │   ├── llm/            # 多 LLM 供应商抽象
 │   ├── tools/          # 工具注册中心（搜索、RAG 检索）
 │   ├── redis/          # Redis 缓存
